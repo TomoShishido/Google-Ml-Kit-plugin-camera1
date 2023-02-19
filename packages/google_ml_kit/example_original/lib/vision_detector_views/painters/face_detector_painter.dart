@@ -19,7 +19,6 @@ class FaceDetectorPainter extends CustomPainter {
       ..strokeWidth = 1.0
       ..color = Colors.red;
 
-
     for (final Face face in faces) {
       canvas.drawRect(
         Rect.fromLTRB(
@@ -65,15 +64,6 @@ class FaceDetectorPainter extends CustomPainter {
       paintContour(FaceContourType.leftCheek);
       paintContour(FaceContourType.rightCheek);
     }
-// To draw frame
-    final Paint framepaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 10.0
-      ..color = Color.fromARGB(255, 117, 54, 244);
-    canvas.drawOval(Rect.fromLTRB(10, 100, (size.width -10), (size.height-20)), framepaint);
-
-
-
   }
 
   @override

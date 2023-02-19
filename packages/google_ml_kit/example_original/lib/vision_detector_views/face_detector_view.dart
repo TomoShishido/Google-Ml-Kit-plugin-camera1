@@ -60,23 +60,10 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     } else {
       String text = 'Faces found: ${faces.length}\n\n';
       for (final face in faces) {
-        final Rect boundingBox = face.boundingBox;
-
-        // final double? rotX = face.headEulerAngleX; // Head is tilted up and down rotX degrees
-        final double? rotY = face.headEulerAngleY; // Head is rotated to the right rotY degrees
-        // final double? rotZ = face.headEulerAngleZ; // Head is tilted sideways rotZ degrees
-        if ((boundingBox.top < 0.2) && (boundingBox.bottom >0.8) && (rotY < 0.2) && (rotY > 0.15)) {
-          //ここにカメラのシャッターを切って、そのimageを別のviewへnavigateするようにしたい。
-        }
-
-
         text += 'face: ${face.boundingBox}\n\n';
       }
       _text = text;
       // TODO: set _customPaint to draw boundingRect on top of image
-
-
-
       _customPaint = null;
     }
     _isBusy = false;
