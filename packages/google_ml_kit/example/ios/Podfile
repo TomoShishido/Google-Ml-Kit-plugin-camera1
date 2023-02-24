@@ -37,7 +37,7 @@ target 'Runner' do
 end
 
 # add this line:
-$iOSVersion = '10.0'
+$iOSVersion = '11.0'
 
 post_install do |installer|
   # add these lines:
@@ -57,3 +57,5 @@ post_install do |installer|
     end
   end
 end
+
+install! 'cocoapods', :warn_for_unused_master_specs_repo => false
