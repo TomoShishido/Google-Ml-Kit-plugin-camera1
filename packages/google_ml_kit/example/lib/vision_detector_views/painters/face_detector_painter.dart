@@ -66,6 +66,45 @@ class FaceDetectorPainter extends CustomPainter {
       paintContour(FaceContourType.rightCheek);
     }
 // To draw frame
+    final Paint upperpaint = Paint()
+      ..style = PaintingStyle.fill
+      ..strokeWidth = 10.0
+      ..color = Colors.white;
+    final Rect rectFromLTRB = Rect.fromLTRB(0, 0,(size.width), 100);
+    canvas.drawRect(rectFromLTRB, upperpaint);
+    
+    // 基本のテキストスタイル
+    final textStyle = TextStyle(
+      color: Colors.black,
+      fontSize: 30,
+    );
+
+    // 装飾されたテキストの定義
+    String _text = '顔を枠に入れて左右に向いてください';
+    final textSpan = TextSpan(
+      style: textStyle,
+      children: <TextSpan>[
+        TextSpan(text: _text.substring(0,2)),
+        TextSpan(text: _text.substring(2,7),style: TextStyle(color: Colors.red)),
+        TextSpan(text: _text.substring(7,_text.length),style: TextStyle(color: Colors.blue)),
+      ]
+    );
+
+    // テキスト描画用のペインター
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout(
+      minWidth: 0,
+      maxWidth: size.width,
+    );
+
+    // テキストの描画
+    var offset = Offset(10, 10);
+    textPainter.paint(canvas, offset);
+
+
     final Paint framepaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 10.0
