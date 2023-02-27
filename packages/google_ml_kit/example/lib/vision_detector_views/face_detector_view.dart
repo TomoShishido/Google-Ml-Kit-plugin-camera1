@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -25,6 +26,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   CustomPaint? _customPaint;
   String? _text;
   String? _tempFilePath;
+  double _prevX = 0.0;
+  double _prevY = 0.0;
 
   @override
   void dispose() {
@@ -44,6 +47,46 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
       },
       initialDirection: CameraLensDirection.front,
     );
+  }
+
+  imglib.Image _convertYUV420(
+      int width, int height, Uint8List image, InputImageRotation rotation) {
+    var img = imglib.Image(width, height); // Create Image buffer
+
+    //final Plane plane = image.planes[0];
+    const int shift = (0xFF << 24);
+
+    // Fill image buffer with plane[0] from YUV420_888
+    for (int x = 0; x < width; x++) {
+      for (int planeOffset = 0;
+          planeOffset < height * width;
+          planeOffset += width) {
+        final pixelColor = image[planeOffset + x];
+        // color: 0x FF  FF  FF  FF
+        //           A   B   G   R
+        // Calculate pixel color
+        var newVal =
+            shift | (pixelColor << 16) | (pixelColor << 8) | pixelColor;
+
+        img.data[planeOffset + x] = newVal;
+      }
+    }
+    if (rotation != InputImageRotation.rotation0deg) {
+      switch (rotation) {
+        case InputImageRotation.rotation90deg:
+          img = imglib.copyRotate(img, 90);
+          break;
+        case InputImageRotation.rotation180deg:
+          img = imglib.copyRotate(img, 180);
+          break;
+        case InputImageRotation.rotation270deg:
+          img = imglib.copyRotate(img, 270);
+          break;
+        default:
+          break;
+      }
+    }
+    return img;
   }
 
   Future<void> processImage(InputImage inputImage) async {
@@ -79,17 +122,33 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
         if (rotX != null &&
             rotY != null &&
             rotX.abs() < 10.0 &&
-            rotY.abs() > 20) {
+            rotY.abs() > 20 &&
+            ((_prevX - rotX.abs()).abs() + (_prevY - rotY.abs()).abs()) < 1) {
           _canProcess = false;
+
+          imglib.Image img;
 
           // save image
           print(inputImage.inputImageData!.inputImageFormat);
+          imglib.Format imgFormat = imglib.Format.bgra; // iOS default
+          switch (inputImage.inputImageData!.inputImageFormat) {
+            case InputImageFormat.yuv_420_888: // Pixel
+              img = _convertYUV420(
+                  inputImage.inputImageData!.size.width.toInt(),
+                  inputImage.inputImageData!.size.height.toInt(),
+                  inputImage.bytes!,
+                  inputImage.inputImageData!.imageRotation);
+              break;
+            default:
+              imgFormat = imglib.Format.bgra;
+              img = imglib.Image.fromBytes(
+                  inputImage.inputImageData!.size.width.toInt(),
+                  inputImage.inputImageData!.size.height.toInt(),
+                  inputImage.bytes!,
+                  format: imgFormat);
+              break;
+          }
 
-          final imglib.Image img = imglib.Image.fromBytes(
-              inputImage.inputImageData!.size.width.toInt(),
-              inputImage.inputImageData!.size.height.toInt(),
-              inputImage.bytes!,
-              format: imglib.Format.bgra);
           final imglib.PngEncoder pngEncoder = imglib.PngEncoder();
           final List<int> png = pngEncoder.encodeImage(img);
 
@@ -123,6 +182,9 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
             });
           }));
           //_canProcess = false;
+        } else {
+          _prevX = rotX != null ? rotX.abs() : 0;
+          _prevY = rotY != null ? rotY.abs() : 0;
         }
 
         text += 'face: ${face.boundingBox}\n\n';
