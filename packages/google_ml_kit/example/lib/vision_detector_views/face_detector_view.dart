@@ -36,6 +36,15 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     super.dispose();
   }
 
+  int getARGBFromYUV(int yValue, int uValue, int vValue) {
+    const int shift = (0xFF << 24);
+    final r = (yValue + 1.370705 * vValue).round();
+    final g = (yValue - (0.698001 * vValue) - (0.337633 * uValue)).round();
+    final b = (yValue + 1.732446 * uValue).round();
+    final rgbValue = shift | (r << 16) | (g << 8) | b;
+    return rgbValue;
+  }
+
   @override
   Widget build(BuildContext context) {
     return CameraView(
@@ -53,6 +62,48 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
       int width, int height, Uint8List image, InputImageRotation rotation) {
     var img = imglib.Image(width, height); // Create Image buffer
 
+    final int foldInterval = (width * height / 4).round();
+    final int uIndex0 = width * height;
+    final int vIndex0 = width * height + foldInterval;
+
+    for (int i = 0; i < width * height / 4; i++) {
+      final int pixelBoxLeftTopIndex = i * 2 + (i * 2 / foldInterval).round();
+      final int uValue = img.data[uIndex0 + i];
+      final int vValue = img.data[vIndex0 + i];
+
+      final imgIndexList = [
+        pixelBoxLeftTopIndex,
+        pixelBoxLeftTopIndex + 1,
+        pixelBoxLeftTopIndex + foldInterval,
+        pixelBoxLeftTopIndex + foldInterval + 1
+      ];
+      for (final imgIndex in imgIndexList) {
+        final yValue = img.data[imgIndex];
+        img.data[imgIndex] = getARGBFromYUV(yValue, uValue, vValue);
+      }
+    }
+    if (rotation != InputImageRotation.rotation0deg) {
+      switch (rotation) {
+        case InputImageRotation.rotation90deg:
+          img = imglib.copyRotate(img, 90);
+          break;
+        case InputImageRotation.rotation180deg:
+          img = imglib.copyRotate(img, 180);
+          break;
+        case InputImageRotation.rotation270deg:
+          img = imglib.copyRotate(img, 270);
+          break;
+        default:
+          break;
+      }
+    }
+    return img;
+  }
+
+  imglib.Image _convertYUV420Greyscale(
+      int width, int height, Uint8List image, InputImageRotation rotation) {
+    var img = imglib.Image(width, height); // Create Image buffer
+
     //final Plane plane = image.planes[0];
     const int shift = (0xFF << 24);
 
@@ -65,12 +116,14 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
         // color: 0x FF  FF  FF  FF
         //           A   B   G   R
         // Calculate pixel color
-        var newVal =
+
+        final newVal =
             shift | (pixelColor << 16) | (pixelColor << 8) | pixelColor;
 
         img.data[planeOffset + x] = newVal;
       }
     }
+
     if (rotation != InputImageRotation.rotation0deg) {
       switch (rotation) {
         case InputImageRotation.rotation90deg:
@@ -133,7 +186,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
           imglib.Format imgFormat = imglib.Format.bgra; // iOS default
           switch (inputImage.inputImageData!.inputImageFormat) {
             case InputImageFormat.yuv_420_888: // Pixel
-              img = _convertYUV420(
+              //img = _convertYUV420(
+              img = _convertYUV420Greyscale(
                   inputImage.inputImageData!.size.width.toInt(),
                   inputImage.inputImageData!.size.height.toInt(),
                   inputImage.bytes!,
