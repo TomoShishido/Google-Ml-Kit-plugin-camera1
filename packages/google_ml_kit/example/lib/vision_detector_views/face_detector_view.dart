@@ -36,13 +36,15 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     super.dispose();
   }
 
-  int getARGBFromYUV(int yValue, int uValue, int vValue) {
-    const int shift = (0xFF << 24);
+  int getRGBAFromYUV(int yValue, int uValue, int vValue) {
+    //print('$yValue, $uValue, $vValue');
+    const int shift = (0xFF << 24); // | 0xFF;
     final r = (yValue + 1.370705 * vValue).round();
     final g = (yValue - (0.698001 * vValue) - (0.337633 * uValue)).round();
     final b = (yValue + 1.732446 * uValue).round();
-    final rgbValue = shift | (r << 16) | (g << 8) | b;
-    return rgbValue;
+    //final bgraValue = shift | (b << 24) | (g << 16) | r << 8;
+    final rgbaValue = shift | (b << 16) | (g << 8) | r << 0;
+    return rgbaValue;
   }
 
   @override
@@ -58,28 +60,18 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     );
   }
 
-  imglib.Image _convertYUV420(
-      int width, int height, Uint8List image, InputImageRotation rotation) {
+  imglib.Image _convertYUV420(int width, int height, Uint8List image,
+      List<InputImagePlaneMetadata> planes, InputImageRotation rotation) {
     var img = imglib.Image(width, height); // Create Image buffer
 
-    final int foldInterval = (width * height / 4).round();
-    final int uIndex0 = width * height;
-    final int vIndex0 = width * height + foldInterval;
-
-    for (int i = 0; i < width * height / 4; i++) {
-      final int pixelBoxLeftTopIndex = i * 2 + (i * 2 / foldInterval).round();
-      final int uValue = img.data[uIndex0 + i];
-      final int vValue = img.data[vIndex0 + i];
-
-      final imgIndexList = [
-        pixelBoxLeftTopIndex,
-        pixelBoxLeftTopIndex + 1,
-        pixelBoxLeftTopIndex + foldInterval,
-        pixelBoxLeftTopIndex + foldInterval + 1
-      ];
-      for (final imgIndex in imgIndexList) {
-        final yValue = img.data[imgIndex];
-        img.data[imgIndex] = getARGBFromYUV(yValue, uValue, vValue);
+    for (int x = 0; x < width; x++) {
+      for (int y = 0; y < height; y++) {
+        final yValue = planes[0].data![y * width + x];
+        final imgIndex = y * width + x;
+        final uvIndex = ((y / 2) * (width / 2) + (x / 2)).round();
+        final uValue = (planes[1].data![uvIndex] - 128) * 1;
+        final vValue = (planes[2].data![uvIndex] - 128) * 1;
+        img.data[imgIndex] = getRGBAFromYUV(yValue, uValue, vValue);
       }
     }
     if (rotation != InputImageRotation.rotation0deg) {
@@ -186,11 +178,12 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
           imglib.Format imgFormat = imglib.Format.bgra; // iOS default
           switch (inputImage.inputImageData!.inputImageFormat) {
             case InputImageFormat.yuv_420_888: // Pixel
-              //img = _convertYUV420(
-              img = _convertYUV420Greyscale(
+              img = _convertYUV420(
+                  //img = _convertYUV420Greyscale(
                   inputImage.inputImageData!.size.width.toInt(),
                   inputImage.inputImageData!.size.height.toInt(),
                   inputImage.bytes!,
+                  inputImage.inputImageData!.planeData!,
                   inputImage.inputImageData!.imageRotation);
               break;
             default:

@@ -102,12 +102,11 @@ class InputImagePlaneMetadata {
   /// Width of the pixel buffer on iOS.
   final int? width;
 
+  final List<Uint8List>? planes;
+
   /// Constructor to create an instance of [InputImagePlaneMetadata].
-  InputImagePlaneMetadata({
-    required this.bytesPerRow,
-    this.height,
-    this.width,
-  });
+  InputImagePlaneMetadata(
+      {required this.bytesPerRow, this.height, this.width, this.planes});
 
   /// Returns a json representation of an instance of [InputImagePlaneMetadata].
   Map<String, dynamic> toJson() => {

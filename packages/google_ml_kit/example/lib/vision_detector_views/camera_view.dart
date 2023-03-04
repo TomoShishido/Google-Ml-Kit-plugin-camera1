@@ -315,6 +315,14 @@ class _CameraViewState extends State<CameraView> {
     for (final Plane plane in image.planes) {
       allBytes.putUint8List(plane.bytes);
     }
+
+    if (image.planes.isNotEmpty) {
+      for (final Plane plane in image.planes.sublist(1)) {
+        final WriteBuffer planeBytes = WriteBuffer();
+        planeBytes.putUint8List(plane.bytes);
+      }
+    }
+
     final bytes = allBytes.done().buffer.asUint8List();
 
     final Size imageSize =
@@ -335,6 +343,7 @@ class _CameraViewState extends State<CameraView> {
           bytesPerRow: plane.bytesPerRow,
           height: plane.height,
           width: plane.width,
+          data: plane.bytes,
         );
       },
     ).toList();
